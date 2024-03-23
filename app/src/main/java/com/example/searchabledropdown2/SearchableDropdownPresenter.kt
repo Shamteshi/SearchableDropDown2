@@ -17,13 +17,18 @@ class SearchableDropdownPresenter : ViewModel(){
     fun loadValues(){
         viewModelScope.launch {
             if(state.result.isEmpty()){
+                state = state.copy(loadingNumbers = true)
                 val data = listOf(1,2,3,4,5)
                 delay(3000)
-                state = state.copy(result = data)
+                state = state.copy(result = data, loadingNumbers = false)
             }
 
         }
 
+    }
+
+    fun setNumber(number: Int){
+        state = state.copy(selectedNumber = number)
     }
 
 

@@ -38,12 +38,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.searchabledropdown2.ui.theme.SearchableDropDown2Theme
+
+
+//update the Ui of the app,
+//customize the design to look more appealing
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -71,15 +74,7 @@ fun MainScreen(
 ) {
 
 
-    var result = viewModel.state.result
-
-    var isLoading by remember {
-        mutableStateOf(false)
-    }
-
-    var isVisible by remember {
-        mutableStateOf(false)
-    }
+    val state = viewModel.state
 
 
 
@@ -91,30 +86,26 @@ fun MainScreen(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
 
-        LaunchedEffect(result) {
-            if (result.isNotEmpty()) {
-                isLoading = false
-            }
-        }
+
 
 
         TextField(
-            text = "Click me",
-            items = result,
-            isLoading = isLoading,
-            isVisible = isVisible,
-            onDismiss = {
-                isVisible = false
+            value = state.selectedNumber,
+            hint = "Select a number",
+            items = state.result,
+            borderColor = Color.Blue,
+            isLoading = state.loadingNumbers,
+            onSelect = {
+                viewModel.setNumber(it)
             },
-            onClick = {
-                if (result.isEmpty()) {
-                    isLoading = true
-                    viewModel.loadValues()
-                } else {
-                    isLoading = false
-                }
-                isVisible = true
+            itemAsString = {
+                it.toString()
+            },
+            onLoad = {
+                viewModel.loadValues()
+
             }
+
         )
 
     }
@@ -124,28 +115,48 @@ fun MainScreen(
 @Composable
 fun <T> TextField(
     modifier: Modifier = Modifier,
-    text: String,
+    value: T?,
+    hint: String,
     items: List<T>,
     isLoading: Boolean = false,
-    isVisible: Boolean = false,
-    onClick: (() -> Unit)? = null,
-    onDismiss: (() -> Unit)? = null,
+//    isVisible: Boolean = false,
+    borderColor: Color = Color.Black,
+    borderSize: Dp = Dp.Hairline,
+    itemAsString: (T) -> String,
+    onLoad: (() -> Unit)? = null,
+    onSelect: ((T) -> Unit),
     windowInsets: WindowInsets = WindowInsets.displayCutout
 ) {
 
     val bottomPadding = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+//    var loading by remember {
+//        mutableStateOf(false)
+//    }
+//
+    var isVisible by remember {
+        mutableStateOf(false)
+    }
+
+    var dismiss  by remember {
+        mutableStateOf(false)
+    }
 
     Box(
         modifier = modifier
             .fillMaxWidth()
             .height(60.dp)
             .clip(RoundedCornerShape(15.dp))
-            .border(Dp.Hairline, Color.Black, RoundedCornerShape(15.dp))
+            .border(borderSize, borderColor, RoundedCornerShape(15.dp))
             .clickable(
                 interactionSource = null,
                 indication = null
             ) {
-                onClick?.invoke()
+                if (items.isEmpty()) {
+                    onLoad?.invoke()
+                } else {
+                    isVisible = true
+                }
+
 
             }
     ) {
@@ -158,8 +169,12 @@ fun <T> TextField(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
+            if(value == null){
+                Text(text = hint)
+            }else{
+                Text(text = itemAsString(value))//whatever the selected value is, pass it to the itamAsString
 
-            Text(text = text)
+            }
 
             if (!isLoading) {
                 Icon(
@@ -176,12 +191,21 @@ fun <T> TextField(
 
     if (isVisible && items.isNotEmpty()) {
         ModalBottomSheet(
-            onDismissRequest = { onDismiss?.invoke() },
+            onDismissRequest = { isVisible = false},
             windowInsets = windowInsets
         ) {
             LazyColumn(modifier = modifier.padding(bottom = bottomPadding)) {
                 items(items) { item ->
-                    Text(text = item.toString())
+
+                    Box(modifier = modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 16.dp, horizontal = 14.dp)
+                        .clickable {
+                            isVisible = false
+                            onSelect(item)//this passes the item to whatever will use it.
+                        }) {
+                        Text(text = itemAsString(item))
+                    }
                 }
             }
         }
