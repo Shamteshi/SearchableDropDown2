@@ -1,22 +1,27 @@
 package com.example.searchabledropdown2
 
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.displayCutout
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -26,6 +31,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -38,6 +44,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowCompat
@@ -87,8 +94,6 @@ fun MainScreen(
     ) {
 
 
-
-
         TextField(
             value = state.selectedNumber,
             hint = "Select a number",
@@ -119,9 +124,8 @@ fun <T> TextField(
     hint: String,
     items: List<T>,
     isLoading: Boolean = false,
-//    isVisible: Boolean = false,
     borderColor: Color = Color.Black,
-    borderSize: Dp = Dp.Hairline,
+    borderSize: Dp = 2.dp,
     itemAsString: (T) -> String,
     onLoad: (() -> Unit)? = null,
     onSelect: ((T) -> Unit),
@@ -129,17 +133,16 @@ fun <T> TextField(
 ) {
 
     val bottomPadding = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
-//    var loading by remember {
-//        mutableStateOf(false)
-//    }
-//
+
     var isVisible by remember {
         mutableStateOf(false)
     }
 
-    var dismiss  by remember {
+    var dismiss by remember {
         mutableStateOf(false)
     }
+
+    val context = LocalContext.current
 
     Box(
         modifier = modifier
@@ -169,9 +172,9 @@ fun <T> TextField(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            if(value == null){
-                Text(text = hint)
-            }else{
+            if (value == null) {
+                Text(text = hint, color = Color.Gray)
+            } else {
                 Text(text = itemAsString(value))//whatever the selected value is, pass it to the itamAsString
 
             }
@@ -179,7 +182,8 @@ fun <T> TextField(
             if (!isLoading) {
                 Icon(
                     imageVector = Icons.Default.KeyboardArrowDown,
-                    contentDescription = "Arrow down"
+                    contentDescription = "Arrow down",
+                    tint = Color.Blue
                 )
             } else {
                 LoadingAnimation()
@@ -190,21 +194,61 @@ fun <T> TextField(
 
 
     if (isVisible && items.isNotEmpty()) {
+//        Toast.makeText(context, searchedItems.size.toString(), Toast.LENGTH_LONG).show()
+
         ModalBottomSheet(
-            onDismissRequest = { isVisible = false},
+            modifier = modifier,
+            onDismissRequest = { isVisible = false },
             windowInsets = windowInsets
         ) {
-            LazyColumn(modifier = modifier.padding(bottom = bottomPadding)) {
-                items(items) { item ->
 
+
+            var searchItem by remember {
+                mutableStateOf("")
+            }
+
+            var searchedItems by remember {
+                mutableStateOf(items)
+            }
+
+            OutlinedTextField(
+                modifier = modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
+                label = {
+                    Text(text = "Search")
+                },
+                singleLine = true,
+                value = searchItem, onValueChange = {
+                    searchItem = it
+                    searchedItems = items.filter { item ->
+                        if (item is String) {
+                            item.lowercase().contains(it.lowercase())
+                        } else {
+                            itemAsString(item).lowercase().contains(it.lowercase())
+                        }
+                    }
+                })
+
+            Spacer(modifier = modifier.height(12.dp))
+
+            if(searchedItems.isEmpty()){
+                Box(modifier = modifier.fillMaxWidth().height(300.dp).padding(16.dp), contentAlignment = Alignment.Center){
+                    Text(text = "Whoops found nothing...")
+                }
+            }
+
+            LazyColumn(modifier = modifier.padding(bottom = bottomPadding)) {
+                items(searchedItems.size) { item ->
+                    val search = searchedItems.elementAt(item)
                     Box(modifier = modifier
                         .fillMaxWidth()
                         .padding(vertical = 16.dp, horizontal = 14.dp)
                         .clickable {
                             isVisible = false
-                            onSelect(item)//this passes the item to whatever will use it.
+                            onSelect(search)//this passes the item to whatever will use it.
                         }) {
-                        Text(text = itemAsString(item))
+                        Text(text = itemAsString(search))
                     }
                 }
             }
